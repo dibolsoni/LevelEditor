@@ -1,2 +1,2 @@
 # LevelEditor
-The libpandaworld Level Editor, based off of the Panda3D Level Editor.
+The libpandaworld Level Editor, using Panda3D.
