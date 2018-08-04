@@ -1,7 +1,11 @@
 # Our junk
 libpandaworld/
+worldData/
+*.bam
+*.egg
 *.bat
 *.json
+*.world
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
