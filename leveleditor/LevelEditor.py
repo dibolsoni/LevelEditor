@@ -331,13 +331,28 @@ class LevelEditor(NodePath, DirectObject):
 
         self.worldCreator.addObject(self.currentWorld[1] + '.world', self.currentWorld[0], locUid, locationData)
 
+        self.window.loadModelButton.configure(state='normal')
         self.currentLocation = (locUid, locShortName)
 
     def loadModel(self, model):
         node = loader.loadModel(model)
         node.reparentTo(render)
 
-        self.nodePaths[node] = [self.getUid(), node.getPos(), node.getHpr(), node.getScale(), set()]
+        newUid = self.getUid()
+
+        modelData = odict([
+            ('Type', 'Object'),
+            ('Pos', node.getPos()),
+            ('Hpr', node.getHpr()),
+            ('Scale', node.getScale()),
+            ('DisableCollision', False),
+            ('Visual', odict([
+                ('Model', model)]))
+        ])
+
+        self.worldCreator.addObject(self.currentLocation[1] + '.world', self.currentLocation[0], newUid, modelData)
+
+        self.nodePaths[node] = [newUid, node.getPos(), node.getHpr(), node.getScale(), set()]
 
         traverser = self.nodeTraverser(node)
         for n in traverser:
@@ -425,6 +440,7 @@ class LevelEditorWindow(MegaToplevel):
                                       text='Load model',
                                       command=self.loadModel)
         self.loadModelButton.pack(padx=20, pady=10)
+        self.loadModelButton.configure(state='disable')
 
         self.modelSelector = ComboBox(self.modelPage,
                                       dropdown=0,
