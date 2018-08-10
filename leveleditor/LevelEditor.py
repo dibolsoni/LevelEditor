@@ -7,10 +7,11 @@ from direct.directnotify.DirectNotifyGlobal import directNotify
 from tkFileDialog import askopenfilename, askdirectory
 from Tkinter import *
 from Pmw import MegaToplevel, MenuBar, ComboBox
-from Pmw import NoteBook
+from Pmw import EntryField, NoteBook, Dialog
 
 from libpandaworld.WorldCreator import WorldCreator
 
+from collections import OrderedDict as odict
 from getpass import getuser
 from json import dumps
 
@@ -44,6 +45,9 @@ class LevelEditor(NodePath, DirectObject):
             ('control-arrow_down', self.keyboardXformSelected, ['down', 'rotate'])]
 
         self.selectedNode = None
+
+        self.currentWorld = ()
+        self.currentLocation = ()
 
         self.lastAngle = 0.0
 
@@ -249,6 +253,86 @@ class LevelEditor(NodePath, DirectObject):
         # resources can contain thousands of models.
         # self.window.showResources()
 
+    def newWorld(self, button):
+        self.window.newWorldDialog.deactivate(button)
+        self.window.newWorldDialog.withdraw()
+
+        worldName = self.window.newWorldField.getvalue()
+        if not worldName:
+            return
+
+        worldUid = self.getUid()
+
+        # Start off with a basic region
+        newWorld = odict([(
+            'Objects', odict([(
+                worldUid, odict([
+                    ('Name', worldName),
+                    ('Type', 'Region'),
+                    ('Objects', odict())])
+            )])
+        )])
+
+        self.worldCreator.fileDicts[worldName + '.world'] = newWorld
+
+        self.currentWorld = (worldUid, worldName)
+
+    def newLocation(self, button):
+        self.window.newLocationDialog.deactivate(button)
+        self.window.newLocationDialog.withdraw()
+
+        locName = self.window.newLocationNameField.getvalue()
+        if not locName:
+            return
+
+        model = self.window.newLocationModelField.getvalue()
+        if model not in self.modelPaths:
+            return
+
+        if not self.currentWorld:
+            return
+
+        locUid = self.getUid()
+        locShortName = locName.replace(' ', '') + 'Location'
+
+        # Start off with a basic location
+        newLocation = odict([(
+            'Objects', odict([(
+                locUid, odict([
+                    ('Name', locShortName),
+                    ('File', ''),
+                    ('Type', 'Location'),
+                    ('Visual', odict([
+                        ('Model', model)])),
+                    ('Objects', odict())])
+            )])
+        )])
+
+        self.worldCreator.fileDicts[locShortName + '.world'] = newLocation
+
+        locationData = odict([
+            ('Name', locName),
+            ('File', locShortName),
+            ('Type', 'Location'),
+            ('Pos', (0, 0, 0)),
+            ('Hpr', (0, 0, 0)),
+            ('Scale', (0, 0, 0)),
+            ('Visual', odict([
+                ('Model', model)])),
+            ('Objects', odict([(
+                self.getUid(), odict([
+                    ('Type', 'LOD Sphere'),
+                    ('Pos', (0, 0, 0)),
+                    ('Hpr', (0, 0, 0)),
+                    ('Scale', (0, 0, 0)),
+                    ('Radi', (1000.0, 1000.0, 1000))])
+            )])
+        )])
+
+        self.worldCreator.addObject(self.currentWorld[1] + '.world', self.currentWorld[0], locUid, locationData)
+
+        self.currentLocation = (locUid, locShortName)
+
     def loadModel(self, model):
         node = loader.loadModel(model)
         node.reparentTo(render)
@@ -293,9 +377,6 @@ class LevelEditorWindow(MegaToplevel):
         self.hull = self.component('hull')
         self.hull.geometry('400x625')
 
-        self.resourceFrame = Frame(self.hull, relief=GROOVE, bd=2)
-        self.resourceFrame.pack(fill=X)
-
         self.menuFrame = Frame(self.hull, relief=GROOVE, bd=2)
         self.menuFrame.pack(fill=X)
 
@@ -309,12 +390,22 @@ class LevelEditorWindow(MegaToplevel):
                                  command=self.editor.loadResources)
         self.menuBar.addmenuitem('File',
                                  'command',
-                                 'Open world file',
+                                 'Create new world',
+                                 label='New world',
+                                 command=self.newWorld)
+        self.menuBar.addmenuitem('File',
+                                 'command',
+                                 'Create new location',
+                                 label='New location',
+                                 command=self.newLocation)
+        self.menuBar.addmenuitem('File',
+                                 'command',
+                                 'Open world',
                                  label='Open',
                                  command=self.editor.loadWorld)
         self.menuBar.addmenuitem('File',
                                  'command',
-                                 'Save world file',
+                                 'Save world',
                                  label='Save',
                                  command=self.editor.saveWorld)
 
@@ -342,6 +433,35 @@ class LevelEditorWindow(MegaToplevel):
                                       selectioncommand=self.setModel)
         self.modelSelector.pack(expand=1, fill=BOTH)
 
+        self.newWorldDialog = Dialog(buttons=('Create World',),
+                                     title='New World',
+                                     command=self.editor.newWorld)
+        self.newWorldDialog.geometry('250x100')
+        self.newWorldDialog.withdraw()
+
+        self.newWorldLabel = Label(self.newWorldDialog.interior(),
+                                   text='Set the name of the world')
+        self.newWorldLabel.pack()
+
+        self.newWorldField = EntryField(self.newWorldDialog.interior())
+        self.newWorldField.pack(fill=BOTH, expand=1)
+
+        self.newLocationDialog = Dialog(buttons=('Create Location',),
+                                     title='New Location',
+                                     command=self.editor.newLocation)
+        self.newLocationDialog.geometry('350x100')
+        self.newLocationDialog.withdraw()
+
+        self.newLocationLabel = Label(self.newLocationDialog.interior(),
+                                   text='Set the name then model of the location')
+        self.newLocationLabel.pack()
+
+        self.newLocationNameField = EntryField(self.newLocationDialog.interior())
+        self.newLocationNameField.pack(fill=BOTH, expand=1)
+
+        self.newLocationModelField = EntryField(self.newLocationDialog.interior())
+        self.newLocationModelField.pack(fill=BOTH, expand=1)
+
         self.initialiseoptions(LevelEditorWindow)
 
     def setModel(self, model):
@@ -359,6 +479,12 @@ class LevelEditorWindow(MegaToplevel):
             return
 
         self.editor.loadModel(self.currentModel)
+
+    def newLocation(self):
+        self.newLocationDialog.activate()
+
+    def newWorld(self):
+        self.newWorldDialog.activate()
 
     def showResources(self, paths=[]):
         if not paths:
