@@ -76,7 +76,7 @@ class LevelEditor(NodePath, DirectObject):
         uid = objKey if type(objKey) == str else ''
         if not uid: return
 
-        visual = obj.get('Visual') or {}
+        visual = obj.get('Visual', {})
         model = visual.get('Model')
         if not model: return
 
@@ -331,12 +331,22 @@ class LevelEditor(NodePath, DirectObject):
 
         self.worldCreator.addObject(self.currentWorld[1] + '.world', self.currentWorld[0], locUid, locationData)
 
+        # Load the location model
+        node = loader.loadModel(model)
+        node.reparentTo(render)
+
+        self.nodePaths[node] = [locUid, node.getPos(), node.getHpr(), node.getScale(), set()]
+
+        traverser = self.nodeTraverser(node)
+        for n in traverser:
+            self.nodePaths[node][4].add(n)
+
         self.window.loadModelButton.configure(state='normal')
-        self.currentLocation = (locUid, locShortName)
+        self.currentLocation = (locUid, locShortName, node)
 
     def loadModel(self, model):
         node = loader.loadModel(model)
-        node.reparentTo(render)
+        node.reparentTo(self.currentLocation[2])
 
         newUid = self.getUid()
 
