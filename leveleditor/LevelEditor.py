@@ -34,7 +34,6 @@ class LevelEditor(NodePath, DirectObject):
         self.worldCreator = WorldCreator(self)
 
         self.actionEvents = [
-            ('DIRECT_selectedNodePath', self.selectedNodePathHook),
             ('arrow_left', self.keyboardXformSelected, ['left', 'xlate']),
             ('arrow_right', self.keyboardXformSelected, ['right', 'xlate']),
             ('arrow_up', self.keyboardXformSelected, ['up','xlate']),
@@ -50,6 +49,8 @@ class LevelEditor(NodePath, DirectObject):
         self.currentLocation = ()
 
         self.lastAngle = 0.0
+
+        base.direct.select = self.selectNodePathHook
 
         base.direct.enable()
 
@@ -108,11 +109,9 @@ class LevelEditor(NodePath, DirectObject):
             for result in self.nodeTraverser(child):
                 yield result
 
-    def selectedNodePathHook(self, nodePath):
+    def selectNodePathHook(self, nodePath, fMultiSelect=0, fSelectTag=1, fResetAncestry=1, fLEPane=0, fUndo=1):
         if nodePath == self.selectedNode:
             return
-
-        base.direct.deselect(nodePath)
 
         for node, dataList in self.nodePaths.iteritems():
             nodeSet = dataList[4]
@@ -120,7 +119,7 @@ class LevelEditor(NodePath, DirectObject):
             for childNode in nodeSet:
                 if nodePath.getName() == childNode.getName():
                     self.selectedNode = node
-                    base.direct.select(node)
+                    base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
 
     def getUid(self):
         return str(time.time()) + getuser()
@@ -334,6 +333,14 @@ class LevelEditor(NodePath, DirectObject):
         # Load the location model
         node = loader.loadModel(model)
         node.reparentTo(render)
+        base.direct.select(node)
+
+        base.direct.grid.setPosHpr(node, Point3(20, 0, 0), VBase3(0))
+        handlesToCam = base.direct.widget.getPos(base.direct.camera)
+        handlesToCam = handlesToCam * (base.direct.dr.near / handlesToCam[1])
+        if abs(handlesToCam[0]) > base.direct.dr.nearWidth * 0.4 or \
+            abs(handlesToCam[2]) > base.direct.dr.nearHeight * 0.4:
+            base.direct.cameraControl.centerCamIn(0.5)
 
         self.nodePaths[node] = [locUid, node.getPos(), node.getHpr(), node.getScale(), set()]
 
