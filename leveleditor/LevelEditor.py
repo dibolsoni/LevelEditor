@@ -48,6 +48,8 @@ class LevelEditor(NodePath, DirectObject):
         self.currentWorld = ()
         self.currentLocation = ()
 
+        self.locations = set()
+
         self.lastAngle = 0.0
 
         base.direct.select = self.selectNodePathHook
@@ -121,6 +123,22 @@ class LevelEditor(NodePath, DirectObject):
 
             for childNode in nodeSet:
                 if str(nodePath) == str(childNode):
+                    acceptable = False
+
+                    for loc in self.locations:
+                        if node == loc[2]:
+                            self.currentLocation = loc
+                            acceptable = True
+
+                    if node != self.currentLocation[2]:
+                        traverser = self.nodeTraverser(self.currentLocation[2])
+                        for n in traverser:
+                            if node == n:
+                                acceptable = True
+
+                    if not acceptable:
+                        continue
+
                     self.selectedNode = node
                     base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
                     break
@@ -353,7 +371,9 @@ class LevelEditor(NodePath, DirectObject):
             self.nodePaths[node][4].add(n)
 
         self.window.loadModelButton.configure(state='normal')
+
         self.currentLocation = (locUid, locShortName, node)
+        self.locations.add(self.currentLocation)
 
     def loadModel(self, model):
         node = loader.loadModel(model)
