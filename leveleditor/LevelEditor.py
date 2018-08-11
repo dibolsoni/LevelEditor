@@ -110,6 +110,9 @@ class LevelEditor(NodePath, DirectObject):
                 yield result
 
     def selectNodePathHook(self, nodePath, fMultiSelect=0, fSelectTag=1, fResetAncestry=1, fLEPane=0, fUndo=1):
+        if not nodePath:
+            return
+
         if nodePath == self.selectedNode:
             return
 
@@ -117,9 +120,10 @@ class LevelEditor(NodePath, DirectObject):
             nodeSet = dataList[4]
 
             for childNode in nodeSet:
-                if nodePath.getName() == childNode.getName():
+                if str(nodePath) == str(childNode):
                     self.selectedNode = node
                     base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
+                    break
 
     def getUid(self):
         return str(time.time()) + getuser()
@@ -152,7 +156,7 @@ class LevelEditor(NodePath, DirectObject):
         for selectedNode in base.direct.selected:
             selectedNode.setHpr(self.getLastAngle(), 0, 0)
 
-        # Snap objects to grid and update DNA if necessary
+        # Snap objects to grid and update nodes if necessary
         self.updateSelectedPose(base.direct.selected.getSelectedAsList())
         if base.direct.fShift:
             base.direct.grid.setSnapAngle(oldSnapAngle)
@@ -203,7 +207,7 @@ class LevelEditor(NodePath, DirectObject):
             selectedNode.setPos(base.direct.grid,
                                 selectedNode.getPos(base.direct.grid) + deltaPos)
 
-        # Snap objects to grid and update DNA if necessary
+        # Snap objects to grid and update nodes if necessary
         self.updateSelectedPose(base.direct.selected.getSelectedAsList())
         # Restore grid spacing
         if base.direct.fShift:
