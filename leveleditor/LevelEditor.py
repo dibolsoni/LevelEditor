@@ -31,6 +31,8 @@ class LevelEditor(NodePath, DirectObject):
 
         self.hubParent = 'null'
 
+        self.regionData = {}
+
         self.worldCreator = WorldCreator(self)
 
         self.actionEvents = [
@@ -70,10 +72,43 @@ class LevelEditor(NodePath, DirectObject):
                 self.accept(event[0], event[1])
 
     def createRegion(self, regionData):
-        pass
+        self.regionData = regionData
 
-    def createLocation(self, locData):
-        pass
+    def createLocation(self, uid):
+        obj = self.regionData['Objects'].pop(uid, {})
+
+        model = obj.get('Visual', {}).get('Model')
+        if not model: return
+
+        pos = VBase3(*obj.get('Pos'))
+        hpr = Point3(*obj.get('Hpr'))
+        scale = VBase3(*obj.get('Scale'))
+
+        self.window.showResources([model])
+
+        node = loader.loadModel(model)
+        node.setPos(pos)
+        node.setHpr(hpr)
+        node.setScale(scale)
+        node.reparentTo(render)
+
+        base.direct.select(node)
+
+        base.direct.grid.setPosHpr(node, Point3(20, 0, 0), VBase3(0))
+        handlesToCam = base.direct.widget.getPos(base.direct.camera)
+        handlesToCam = handlesToCam * (base.direct.dr.near / handlesToCam[1])
+        if abs(handlesToCam[0]) > base.direct.dr.nearWidth * 0.4 or \
+            abs(handlesToCam[2]) > base.direct.dr.nearHeight * 0.4:
+            base.direct.cameraControl.centerCamIn(0.5)
+
+        self.nodePaths[node] = [uid, node.getPos(), node.getHpr(), node.getScale(), set()]
+
+        traverser = self.nodeTraverser(node)
+        for n in traverser:
+            self.nodePaths[node][4].add(n)
+
+        self.currentLocation = (uid, obj.get('Name'), node)
+        self.locations.add(self.currentLocation)
 
     def createObject(self, obj, objType, parent, parentUid, objKey, dynamic, actualParentObj, **kwargs):
         uid = objKey if type(objKey) == str else ''
@@ -96,7 +131,10 @@ class LevelEditor(NodePath, DirectObject):
         node.setPos(pos)
         node.setHpr(hpr)
         node.setScale(scale)
-        node.reparentTo(render)
+
+        for loc in self.locations:
+            if loc[0] == parentUid:
+                node.reparentTo(loc[2])
 
         self.nodePaths[node] = [uid, node.getPos(), node.getHpr(), node.getScale(), set()]
 
