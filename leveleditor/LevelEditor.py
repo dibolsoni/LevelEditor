@@ -136,6 +136,9 @@ class LevelEditor(NodePath, DirectObject):
                             if node == n:
                                 acceptable = True
 
+                    if hash(nodePath) != hash(childNode):
+                        acceptable = False
+
                     if not acceptable:
                         continue
 
@@ -237,6 +240,11 @@ class LevelEditor(NodePath, DirectObject):
             self.nodePaths[node][1] = node.getPos()
             self.nodePaths[node][2] = node.getHpr()
             self.nodePaths[node][3] = node.getScale()
+            self.nodePaths[node][4] = set()
+
+            traverser = self.nodeTraverser(node)
+            for n in traverser:
+                self.nodePaths[node][4].add(n)
 
             self.worldCreator.updateObject(self.nodePaths[node][0], 'Pos', tuple(node.getPos()))
             self.worldCreator.updateObject(self.nodePaths[node][0], 'Hpr', tuple(node.getHpr()))
@@ -375,17 +383,26 @@ class LevelEditor(NodePath, DirectObject):
         self.currentLocation = (locUid, locShortName, node)
         self.locations.add(self.currentLocation)
 
-    def loadModel(self, model):
+    def loadModel(self, button):
+        self.window.newModelDialog.deactivate(button)
+        self.window.newModelDialog.withdraw()
+
+        objType = self.window.newModelField.getvalue()
+        if not objType:
+            return
+
+        model = self.window.currentModel
+
         node = loader.loadModel(model)
         node.reparentTo(self.currentLocation[2])
 
         newUid = self.getUid()
 
         modelData = odict([
-            ('Type', 'Object'),
-            ('Pos', node.getPos()),
-            ('Hpr', node.getHpr()),
-            ('Scale', node.getScale()),
+            ('Type', objType),
+            ('Pos', tuple(node.getPos())),
+            ('Hpr', tuple(node.getHpr())),
+            ('Scale', tuple(node.getScale())),
             ('DisableCollision', False),
             ('Visual', odict([
                 ('Model', model)]))
@@ -519,6 +536,19 @@ class LevelEditorWindow(MegaToplevel):
         self.newLocationModelField = EntryField(self.newLocationDialog.interior())
         self.newLocationModelField.pack(fill=BOTH, expand=1)
 
+        self.newModelDialog = Dialog(buttons=('Create Object',),
+                                     title='New Model',
+                                     command=self.editor.loadModel)
+        self.newModelDialog.geometry('250x100')
+        self.newModelDialog.withdraw()
+
+        self.newModelLabel = Label(self.newModelDialog.interior(),
+                                   text='Set the type of the object')
+        self.newModelLabel.pack()
+
+        self.newModelField = EntryField(self.newModelDialog.interior())
+        self.newModelField.pack(fill=BOTH, expand=1)
+
         self.initialiseoptions(LevelEditorWindow)
 
     def setModel(self, model):
@@ -535,7 +565,7 @@ class LevelEditorWindow(MegaToplevel):
         if not self.currentModel:
             return
 
-        self.editor.loadModel(self.currentModel)
+        self.newModelDialog.activate()
 
     def newLocation(self):
         self.newLocationDialog.activate()
