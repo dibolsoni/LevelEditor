@@ -110,6 +110,8 @@ class LevelEditor(NodePath, DirectObject):
         self.currentLocation = (uid, obj.get('Name'), node)
         self.locations.add(self.currentLocation)
 
+        self.window.loadModelButton.configure(state='normal')
+
     def createObject(self, obj, objType, parent, parentUid, objKey, dynamic, actualParentObj, **kwargs):
         uid = objKey if type(objKey) == str else ''
         if not uid: return
@@ -156,33 +158,39 @@ class LevelEditor(NodePath, DirectObject):
         if nodePath == self.selectedNode:
             return
 
+        if 'ohScalingNode' in str(nodePath):
+            base.direct.deselectAllCB()
+            return
+
         for node, dataList in self.nodePaths.iteritems():
             nodeSet = dataList[4]
 
+            if str(nodePath) == str(node):
+                for loc in self.locations:
+                    if node == loc[2]:
+                        self.currentLocation = loc
+
+                self.selectedNode = node
+                base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
+                return
+
             for childNode in nodeSet:
                 if str(nodePath) == str(childNode):
-                    acceptable = False
-
                     for loc in self.locations:
                         if node == loc[2]:
                             self.currentLocation = loc
-                            acceptable = True
 
                     if node != self.currentLocation[2]:
                         traverser = self.nodeTraverser(self.currentLocation[2])
                         for n in traverser:
                             if node == n:
-                                acceptable = True
-
-                    if hash(nodePath) != hash(childNode):
-                        acceptable = False
-
-                    if not acceptable:
-                        continue
+                                self.selectedNode = node
+                                base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
+                                return
 
                     self.selectedNode = node
                     base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
-                    break
+                    return
 
     def getUid(self):
         return str(time.time()) + getuser()
@@ -454,6 +462,24 @@ class LevelEditor(NodePath, DirectObject):
         for n in traverser:
             self.nodePaths[node][4].add(n)
 
+    def addAdditionalData(self, button):
+        self.window.addDataDialog.deactivate(button)
+        self.window.addDataDialog.withdraw()
+
+        file_ = self.window.addDataField.getvalue()
+        if not file_:
+            return
+
+        if file_[-6:] == '.world':
+            file_ = file_[:-6]
+        elif file_[-5:] == '.json':
+            file_ = file_[:-5]
+
+        additionalData = self.worldCreator.getFieldFromUid(self.currentLocation[0], 'AdditionalData') or []
+        additionalData.append(file_)
+
+        self.worldCreator.updateObject(self.currentLocation[0], 'AdditionalData', additionalData)
+
     def loadWorld(self):
         worldFilename = askopenfilename(
             defaultextension = '.world',
@@ -526,11 +552,36 @@ class LevelEditorWindow(MegaToplevel):
         self.currentModel = ''
 
         self.modelPage = self.notebook.add('Models')
+        self.otherPage = self.notebook.add('Other')
 
         self.modelLabel = Label(self.modelPage,
                                 text='Models',
                                 font=('Segoe UI', 14, ''))
         self.modelLabel.pack(expand=0)
+
+        self.otherLabel = Label(self.otherPage,
+                                text='Other',
+                                font=('Segoe UI', 14, ''))
+        self.otherLabel.pack(expand=0)
+
+        self.addDataButton = Button(self.otherPage,
+                                    text='Add Additional Data',
+                                    command=self.addAdditionalData)
+        self.addDataButton.pack()
+        self.addDataButton.configure(state='disable')
+
+        self.addDataDialog = Dialog(buttons=('Add Data',),
+                                     title='Add Data',
+                                     command=self.editor.addAdditionalData)
+        self.addDataDialog.geometry('250x100')
+        self.addDataDialog.withdraw()
+
+        self.addDataLabel = Label(self.addDataDialog.interior(),
+                                   text='Set the new data file')
+        self.addDataLabel.pack()
+
+        self.addDataField = EntryField(self.addDataDialog.interior())
+        self.addDataField.pack(fill=BOTH, expand=1)
 
         self.loadModelButton = Button(self.modelPage,
                                       text='Load model',
@@ -610,6 +661,9 @@ class LevelEditorWindow(MegaToplevel):
 
     def newWorld(self):
         self.newWorldDialog.activate()
+
+    def addAdditionalData(self):
+        self.addDataDialog.activate()
 
     def showResources(self, paths=[]):
         if not paths:
