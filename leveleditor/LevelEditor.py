@@ -45,7 +45,10 @@ class LevelEditor(NodePath, DirectObject):
             ('control-arrow_up', self.keyboardXformSelected, ['up', 'rotate']),
             ('control-arrow_down', self.keyboardXformSelected, ['down', 'rotate'])]
 
+        self.selected = []
+        self.selectedAmount = 0
         self.selectedNode = None
+        self.selectedCallback = None
 
         self.currentWorld = ()
         self.currentLocation = ()
@@ -170,6 +173,15 @@ class LevelEditor(NodePath, DirectObject):
                     if node == loc[2]:
                         self.currentLocation = loc
 
+                if self.selected:
+                    if self.selected[0] == 'ACTIVE':
+                        self.selected[0] = nodeSet[0]
+                    else:
+                        self.selected.append(nodeSet[0])
+                        if len(self.selected) == self.selectedAmount:
+                            self.selectedCallback()
+                            self.selected = []
+
                 self.selectedNode = node
                 base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
                 return
@@ -184,13 +196,36 @@ class LevelEditor(NodePath, DirectObject):
                         traverser = self.nodeTraverser(self.currentLocation[2])
                         for n in traverser:
                             if node == n:
+                                if self.selected:
+                                    if self.selected[0] == 'ACTIVE':
+                                        self.selected[0] = nodeSet[0]
+                                    else:
+                                        self.selected.append(nodeSet[0])
+                                        if len(self.selected) == self.selectedAmount:
+                                            self.selectedCallback()
+                                            self.selected = []
+
                                 self.selectedNode = node
                                 base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
                                 return
 
+                    if self.selected:
+                        if self.selected[0] == 'ACTIVE':
+                            self.selected[0] = nodeSet[0]
+                        else:
+                            self.selected.append(nodeSet[0])
+                            if len(self.selected) == self.selectedAmount:
+                                self.selectedCallback()
+                                self.selected = []
+
                     self.selectedNode = node
                     base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
                     return
+
+    def userSelect(self, amount, callback):
+        self.selected = ['ACTIVE']
+        self.selectedAmount = amount
+        self.selectedCallback = callback
 
     def getUid(self):
         return str(time.time()) + getuser()
@@ -462,11 +497,11 @@ class LevelEditor(NodePath, DirectObject):
         for n in traverser:
             self.nodePaths[node][4].add(n)
 
-    def addAdditionalData(self, button):
-        self.window.addDataDialog.deactivate(button)
-        self.window.addDataDialog.withdraw()
+    def addFamily(self, button):
+        self.window.addFamilyDialog.deactivate(button)
+        self.window.addFamilyDialog.withdraw()
 
-        file_ = self.window.addDataField.getvalue()
+        file_ = self.window.addFamilyField.getvalue()
         if not file_:
             return
 
@@ -475,10 +510,27 @@ class LevelEditor(NodePath, DirectObject):
         elif file_[-5:] == '.json':
             file_ = file_[:-5]
 
-        additionalData = self.worldCreator.getFieldFromUid(self.currentLocation[0], 'AdditionalData') or []
-        additionalData.append(file_)
+        family = self.worldCreator.getFieldFromUid(self.currentLocation[0], 'Family') or []
+        family.append(file_)
 
-        self.worldCreator.updateObject(self.currentLocation[0], 'AdditionalData', additionalData)
+        self.worldCreator.updateObject(self.currentLocation[0], 'Family', family)
+
+    def addLink(self, button):
+        self.window.addLinkDialog.deactivate(button)
+        self.window.addLinkDialog.withdraw()
+
+        objOne, objTwo = self.selected
+
+        name = self.window.addLinkField.getvalue()
+        direction = self.window.addLinkBox.curselection()
+        if not direction or not name:
+            return
+
+        links = self.worldCreator.getRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links')
+        if links:
+            self.worldCreator.addRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links', links.append([objOne, objTwo, direction]))
+        else:
+            self.worldCreator.addRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links', [[objOne, objTwo, direction]])
 
     def loadWorld(self):
         worldFilename = askopenfilename(
@@ -564,24 +616,49 @@ class LevelEditorWindow(MegaToplevel):
                                 font=('Segoe UI', 14, ''))
         self.otherLabel.pack(expand=0)
 
-        self.addDataButton = Button(self.otherPage,
-                                    text='Add Additional Data',
-                                    command=self.addAdditionalData)
-        self.addDataButton.pack()
-        self.addDataButton.configure(state='disable')
+        self.addFamilyButton = Button(self.otherPage,
+                                    text='Add Family',
+                                    command=self.addFamily)
+        self.addFamilyButton.pack()
+        self.addFamilyButton.configure(state='disable')
 
-        self.addDataDialog = Dialog(buttons=('Add Data',),
-                                     title='Add Data',
-                                     command=self.editor.addAdditionalData)
-        self.addDataDialog.geometry('250x100')
-        self.addDataDialog.withdraw()
+        self.addFamilyDialog = Dialog(buttons=('Add Family',),
+                                     title='Add Family',
+                                     command=self.editor.addFamily)
+        self.addFamilyDialog.geometry('250x100')
+        self.addFamilyDialog.withdraw()
 
-        self.addDataLabel = Label(self.addDataDialog.interior(),
-                                   text='Set the new data file')
-        self.addDataLabel.pack()
+        self.addFamilyLabel = Label(self.addFamilyDialog.interior(),
+                                   text='Set the new family file')
+        self.addFamilyLabel.pack()
 
-        self.addDataField = EntryField(self.addDataDialog.interior())
-        self.addDataField.pack(fill=BOTH, expand=1)
+        self.addFamilyField = EntryField(self.addFamilyDialog.interior())
+        self.addFamilyField.pack(fill=BOTH, expand=1)
+
+        self.addLinkButton = Button(self.otherPage,
+                                    text='Add Link',
+                                    command=self.addLink)
+        self.addLinkButton.pack()
+        self.addLinkButton.configure(state='disable')
+
+        self.addLinkDialog = Dialog(buttons=('Add Link',),
+                                     title='Add Link',
+                                     command=self.editor.addLink)
+        self.addLinkDialog.geometry('250x100')
+        self.addLinkDialog.withdraw()
+
+        self.addLinkLabel = Label(self.addLinkDialog.interior(),
+                                   text='Set link name and select direction')
+        self.addLinkLabel.pack()
+
+        self.addLinkField = EntryField(self.addLinkDialog.interior())
+        self.addLinkField.pack(fill=BOTH, expand=1)
+
+        self.addLinkBox = Listbox(self.addLinkDialog.interior())
+        self.addLinkBox.pack(fill=BOTH, expand=1)
+
+        for item in ['Bi-directional', 'Direction 1', 'Direction 2']:
+            self.addLinkBox.insert(END, item)
 
         self.loadModelButton = Button(self.modelPage,
                                       text='Load model',
@@ -662,8 +739,14 @@ class LevelEditorWindow(MegaToplevel):
     def newWorld(self):
         self.newWorldDialog.activate()
 
-    def addAdditionalData(self):
-        self.addDataDialog.activate()
+    def addFamily(self):
+        self.addFamilyDialog.activate()
+
+    def addLink(self):
+        self.editor.userSelect(2, self.addLinkSelected)
+
+    def addLinkSelected(self):
+        self.addLinkDialog.activate()
 
     def showResources(self, paths=[]):
         if not paths:
