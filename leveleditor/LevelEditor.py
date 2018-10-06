@@ -110,7 +110,7 @@ class LevelEditor(NodePath, DirectObject):
         for n in traverser:
             self.nodePaths[node][4].add(n)
 
-        self.currentLocation = (uid, obj.get('Name'), node)
+        self.currentLocation = (uid, obj.get('Name', '').replace(' ', '') + 'Location', node)
         self.locations.add(self.currentLocation)
 
         self.window.addFamilyButton.configure(state='normal')
@@ -596,17 +596,14 @@ class LevelEditor(NodePath, DirectObject):
             data = eval(data)
         except:
             return
-        else:
-            if not isinstance(data, list):
-                return
 
-        table = self.worldCreator.getRootObject(self.currentLocation[0], name + ' Table')
+        table = self.worldCreator.getRootObject(self.currentLocation[1] + '.world', name + ' Table')
         if table:
             table.update({self.getUid(): data})
 
-            self.worldCreator.addRootObject(self.currentLocation[0], name + ' Table', table)
+            self.worldCreator.addRootObject(self.currentLocation[1] + '.world', name + ' Table', table)
         else:
-            self.worldCreator.addRootObject(self.currentLocation[0], name + ' Table', {self.getUid(): data})
+            self.worldCreator.addRootObject(self.currentLocation[1] + '.world', name + ' Table', {self.getUid(): data})
 
     def updateObj(self, button):
         self.window.updateObjDialog.deactivate(button)
