@@ -580,6 +580,31 @@ class LevelEditor(NodePath, DirectObject):
         else:
             self.worldCreator.addRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links', [[objOne, objTwo, direction]])
 
+    def addTable(self, button):
+        self.window.addTableDialog.deactivate(button)
+        self.window.addTableDialog.withdraw()
+
+        name = self.window.addTableName.getvalue()
+        data = self.window.addTableData.getvalue()
+        if not name or not data:
+            return
+
+        try:
+            data = eval(data)
+        except:
+            return
+        else:
+            if not isinstance(data, list):
+                return
+
+        table = self.worldCreator.getRootObject(self.currentLocation[0], name + ' Table')
+        if table:
+            table.update({self.getUid(): data})
+
+            self.worldCreator.addRootObject(self.currentLocation[0], name + ' Table', table)
+        else:
+            self.worldCreator.addRootObject(self.currentLocation[0], name + ' Table', {self.getUid(): data})
+
     def updateObj(self, button):
         self.window.updateObjDialog.deactivate(button)
         self.window.updateObjDialog.withdraw()
@@ -725,6 +750,28 @@ class LevelEditorWindow(MegaToplevel):
         for item in ['Bi-directional', 'Direction 1', 'Direction 2']:
             self.addLinkBox.insert(END, item)
 
+        self.addTableButton = Button(self.otherPage,
+                                    text='Add Table',
+                                    command=self.addTable)
+        self.addTableButton.pack()
+        self.addTableButton.configure(state='disable')
+
+        self.addTableDialog = Dialog(buttons=('Add Table',),
+                                     title='Add Table',
+                                     command=self.editor.addTable)
+        self.addTableDialog.geometry('250x100')
+        self.addTableDialog.withdraw()
+
+        self.addTableLabel = Label(self.addTableDialog.interior(),
+                                   text='Set table name and data')
+        self.addTableLabel.pack()
+
+        self.addTableName = EntryField(self.addTableDialog.interior())
+        self.addTableName.pack(fill=BOTH, expand=1)
+
+        self.addTableData = EntryField(self.addTableDialog.interior())
+        self.addTableData.pack(fill=BOTH, expand=1)
+
         self.updateObjButton = Button(self.otherPage,
                                     text='Update Object',
                                     command=self.updateObj)
@@ -840,6 +887,9 @@ class LevelEditorWindow(MegaToplevel):
 
     def addLinkSelected(self):
         self.addLinkDialog.activate()
+
+    def addTable(self):
+        self.addTableDialog.activate()
 
     def updateObj(self):
         self.editor.userSelect(1, self.updateObjSelected)
