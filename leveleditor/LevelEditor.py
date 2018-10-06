@@ -115,8 +115,8 @@ class LevelEditor(NodePath, DirectObject):
 
         self.window.addFamilyButton.configure(state='normal')
         self.window.addLinkButton.configure(state='normal')
+        self.window.addTableButton.configure(state='normal')
         self.window.updateObjButton.configure(state='normal')
-
         self.window.loadModelButton.configure(state='normal')
 
     def createObject(self, obj, objType, parent, parentUid, objKey, dynamic, actualParentObj, **kwargs):
@@ -179,9 +179,9 @@ class LevelEditor(NodePath, DirectObject):
 
                 if self.selected:
                     if self.selected[0] == 'ACTIVE':
-                        self.selected[0] = nodeSet[0]
+                        self.selected[0] = dataList[0]
                     else:
-                        self.selected.append(nodeSet[0])
+                        self.selected.append(dataList[0])
                         if len(self.selected) == self.selectedAmount:
                             self.selectedCallback()
                             self.selected = []
@@ -202,9 +202,9 @@ class LevelEditor(NodePath, DirectObject):
                             if node == n:
                                 if self.selected:
                                     if self.selected[0] == 'ACTIVE':
-                                        self.selected[0] = nodeSet[0]
+                                        self.selected[0] = dataList[0]
                                     else:
-                                        self.selected.append(nodeSet[0])
+                                        self.selected.append(dataList[0])
                                         if len(self.selected) == self.selectedAmount:
                                             self.selectedCallback()
                                             self.selected = []
@@ -215,9 +215,9 @@ class LevelEditor(NodePath, DirectObject):
 
                     if self.selected:
                         if self.selected[0] == 'ACTIVE':
-                            self.selected[0] = nodeSet[0]
+                            self.selected[0] = dataList[0]
                         else:
-                            self.selected.append(nodeSet[0])
+                            self.selected.append(dataList[0])
                             if len(self.selected) == self.selectedAmount:
                                 self.selectedCallback()
                                 self.selected = []
@@ -463,10 +463,11 @@ class LevelEditor(NodePath, DirectObject):
         for n in traverser:
             self.nodePaths[node][4].add(n)
 
-        self.window.loadModelButton.configure(state='normal')
         self.window.addFamilyButton.configure(state='normal')
         self.window.addLinkButton.configure(state='normal')
+        self.window.addTableButton.configure(state='normal')
         self.window.updateObjButton.configure(state='normal')
+        self.window.loadModelButton.configure(state='normal')
 
         self.currentLocation = (locUid, locShortName, node)
         self.locations.add(self.currentLocation)
