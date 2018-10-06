@@ -29,7 +29,7 @@ class LevelEditor(NodePath, DirectObject):
         self.window = LevelEditorWindow(self)
         self.window['title'] = 'libpandaworld Level Editor'
 
-        self.hubParent = 'null'
+        self.worldParent = 'null'
 
         self.regionData = {}
 
@@ -112,6 +112,10 @@ class LevelEditor(NodePath, DirectObject):
 
         self.currentLocation = (uid, obj.get('Name'), node)
         self.locations.add(self.currentLocation)
+
+        self.window.addFamilyButton.configure(state='normal')
+        self.window.addLinkButton.configure(state='normal')
+        self.window.updateObjButton.configure(state='normal')
 
         self.window.loadModelButton.configure(state='normal')
 
@@ -460,6 +464,9 @@ class LevelEditor(NodePath, DirectObject):
             self.nodePaths[node][4].add(n)
 
         self.window.loadModelButton.configure(state='normal')
+        self.window.addFamilyButton.configure(state='normal')
+        self.window.addLinkButton.configure(state='normal')
+        self.window.updateObjButton.configure(state='normal')
 
         self.currentLocation = (locUid, locShortName, node)
         self.locations.add(self.currentLocation)
@@ -468,9 +475,15 @@ class LevelEditor(NodePath, DirectObject):
         self.window.newModelDialog.deactivate(button)
         self.window.newModelDialog.withdraw()
 
-        objType = self.window.newModelField.getvalue()
+        objType = self.window.newModelType.getvalue()
         if not objType:
             return
+
+        objName = self.window.newModelName.getvalue()
+        try:
+            modelColor = tuple(eval(self.window.newModelColor.getvalue()))
+        except:
+            modelColor = None
 
         model = self.window.currentModel
 
@@ -479,15 +492,50 @@ class LevelEditor(NodePath, DirectObject):
 
         newUid = self.getUid()
 
-        modelData = odict([
-            ('Type', objType),
-            ('Pos', tuple(node.getPos())),
-            ('Hpr', tuple(node.getHpr())),
-            ('Scale', tuple(node.getScale())),
-            ('DisableCollision', False),
-            ('Visual', odict([
-                ('Model', model)]))
-        ])
+        if modelColor and objName:
+            modelData = odict([
+                ('Type', objType),
+                ('Name', objName),
+                ('Pos', tuple(node.getPos())),
+                ('Hpr', tuple(node.getHpr())),
+                ('Scale', tuple(node.getScale())),
+                ('DisableCollision', False),
+                ('Visual', odict([
+                    ('Color', modelColor),
+                    ('Model', model)]))
+            ])
+        elif modelColor:
+            modelData = odict([
+                ('Type', objType),
+                ('Pos', tuple(node.getPos())),
+                ('Hpr', tuple(node.getHpr())),
+                ('Scale', tuple(node.getScale())),
+                ('DisableCollision', False),
+                ('Visual', odict([
+                    ('Color', modelColor),
+                    ('Model', model)]))
+            ])
+        elif objName:
+            modelData = odict([
+                ('Type', objType),
+                ('Name', objName),
+                ('Pos', tuple(node.getPos())),
+                ('Hpr', tuple(node.getHpr())),
+                ('Scale', tuple(node.getScale())),
+                ('DisableCollision', False),
+                ('Visual', odict([
+                    ('Model', model)]))
+            ])
+        else:
+            modelData = odict([
+                ('Type', objType),
+                ('Pos', tuple(node.getPos())),
+                ('Hpr', tuple(node.getHpr())),
+                ('Scale', tuple(node.getScale())),
+                ('DisableCollision', False),
+                ('Visual', odict([
+                    ('Model', model)]))
+            ])
 
         self.worldCreator.addObject(self.currentLocation[1] + '.world', self.currentLocation[0], newUid, modelData)
 
@@ -531,6 +579,23 @@ class LevelEditor(NodePath, DirectObject):
             self.worldCreator.addRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links', links.append([objOne, objTwo, direction]))
         else:
             self.worldCreator.addRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links', [[objOne, objTwo, direction]])
+
+    def updateObj(self, button):
+        self.window.updateObjDialog.deactivate(button)
+        self.window.updateObjDialog.withdraw()
+
+        obj = self.selected[0]
+
+        name = self.window.updateObjName.getvalue()
+        if not name:
+            return
+
+        try:
+            data = eval(self.window.updateObjData.getvalue())
+        except:
+            return
+
+        self.worldCreator.updateObject(obj, name, data)
 
     def loadWorld(self):
         worldFilename = askopenfilename(
@@ -660,6 +725,28 @@ class LevelEditorWindow(MegaToplevel):
         for item in ['Bi-directional', 'Direction 1', 'Direction 2']:
             self.addLinkBox.insert(END, item)
 
+        self.updateObjButton = Button(self.otherPage,
+                                    text='Update Object',
+                                    command=self.updateObj)
+        self.updateObjButton.pack()
+        self.updateObjButton.configure(state='disable')
+
+        self.updateObjDialog = Dialog(buttons=('Update Object',),
+                                     title='Update Object',
+                                     command=self.editor.updateObj)
+        self.updateObjDialog.geometry('250x100')
+        self.updateObjDialog.withdraw()
+
+        self.updateObjLabel = Label(self.updateObjDialog.interior(),
+                                   text='Set a field name then data in object')
+        self.updateObjLabel.pack()
+
+        self.updateObjName = EntryField(self.updateObjDialog.interior())
+        self.updateObjName.pack(fill=BOTH, expand=1)
+
+        self.updateObjData = EntryField(self.updateObjDialog.interior())
+        self.updateObjData.pack(fill=BOTH, expand=1)
+
         self.loadModelButton = Button(self.modelPage,
                                       text='Load model',
                                       command=self.loadModel)
@@ -709,11 +796,17 @@ class LevelEditorWindow(MegaToplevel):
         self.newModelDialog.withdraw()
 
         self.newModelLabel = Label(self.newModelDialog.interior(),
-                                   text='Set the type of the object')
+                                   text='Set the type, name (optional), color (optional) of the object')
         self.newModelLabel.pack()
 
-        self.newModelField = EntryField(self.newModelDialog.interior())
-        self.newModelField.pack(fill=BOTH, expand=1)
+        self.newModelType = EntryField(self.newModelDialog.interior())
+        self.newModelType.pack(fill=BOTH, expand=1)
+
+        self.newModelName = EntryField(self.newModelDialog.interior())
+        self.newModelName.pack(fill=BOTH, expand=1)
+
+        self.newModelColor = EntryField(self.newModelDialog.interior())
+        self.newModelColor.pack(fill=BOTH, expand=1)
 
         self.initialiseoptions(LevelEditorWindow)
 
@@ -747,6 +840,12 @@ class LevelEditorWindow(MegaToplevel):
 
     def addLinkSelected(self):
         self.addLinkDialog.activate()
+
+    def updateObj(self):
+        self.editor.userSelect(1, self.updateObjSelected)
+
+    def updateObjSelected(self):
+        self.updateObjDialog.activate()
 
     def showResources(self, paths=[]):
         if not paths:
