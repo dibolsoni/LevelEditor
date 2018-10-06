@@ -571,13 +571,15 @@ class LevelEditor(NodePath, DirectObject):
         objOne, objTwo = self.selected
 
         name = self.window.addLinkField.getvalue()
-        direction = self.window.addLinkBox.curselection()
+        direction = self.window.addLinkBox.get(self.window.addLinkBox.curselection())
         if not direction or not name:
             return
 
         links = self.worldCreator.getRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links')
         if links:
-            self.worldCreator.addRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links', links.append([objOne, objTwo, direction]))
+            links.append([objOne, objTwo, direction])
+
+            self.worldCreator.addRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links', links)
         else:
             self.worldCreator.addRootObject(self.worldCreator.getFileByUid(objOne), name + ' Links', [[objOne, objTwo, direction]])
 
@@ -716,7 +718,7 @@ class LevelEditorWindow(MegaToplevel):
         self.addFamilyDialog = Dialog(buttons=('Add Family',),
                                      title='Add Family',
                                      command=self.editor.addFamily)
-        self.addFamilyDialog.geometry('250x100')
+        self.addFamilyDialog.geometry('300x300')
         self.addFamilyDialog.withdraw()
 
         self.addFamilyLabel = Label(self.addFamilyDialog.interior(),
@@ -735,7 +737,7 @@ class LevelEditorWindow(MegaToplevel):
         self.addLinkDialog = Dialog(buttons=('Add Link',),
                                      title='Add Link',
                                      command=self.editor.addLink)
-        self.addLinkDialog.geometry('250x100')
+        self.addLinkDialog.geometry('300x300')
         self.addLinkDialog.withdraw()
 
         self.addLinkLabel = Label(self.addLinkDialog.interior(),
@@ -760,7 +762,7 @@ class LevelEditorWindow(MegaToplevel):
         self.addTableDialog = Dialog(buttons=('Add Table',),
                                      title='Add Table',
                                      command=self.editor.addTable)
-        self.addTableDialog.geometry('250x100')
+        self.addTableDialog.geometry('300x300')
         self.addTableDialog.withdraw()
 
         self.addTableLabel = Label(self.addTableDialog.interior(),
@@ -782,7 +784,7 @@ class LevelEditorWindow(MegaToplevel):
         self.updateObjDialog = Dialog(buttons=('Update Object',),
                                      title='Update Object',
                                      command=self.editor.updateObj)
-        self.updateObjDialog.geometry('250x100')
+        self.updateObjDialog.geometry('300x300')
         self.updateObjDialog.withdraw()
 
         self.updateObjLabel = Label(self.updateObjDialog.interior(),
@@ -811,7 +813,7 @@ class LevelEditorWindow(MegaToplevel):
         self.newWorldDialog = Dialog(buttons=('Create World',),
                                      title='New World',
                                      command=self.editor.newWorld)
-        self.newWorldDialog.geometry('250x100')
+        self.newWorldDialog.geometry('300x300')
         self.newWorldDialog.withdraw()
 
         self.newWorldLabel = Label(self.newWorldDialog.interior(),
@@ -840,7 +842,7 @@ class LevelEditorWindow(MegaToplevel):
         self.newModelDialog = Dialog(buttons=('Create Object',),
                                      title='New Model',
                                      command=self.editor.loadModel)
-        self.newModelDialog.geometry('250x100')
+        self.newModelDialog.geometry('300x300')
         self.newModelDialog.withdraw()
 
         self.newModelLabel = Label(self.newModelDialog.interior(),
