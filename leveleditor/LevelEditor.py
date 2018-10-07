@@ -541,6 +541,30 @@ class LevelEditor(NodePath, DirectObject):
                     ('Model', model)]))
             ])
 
+        for field in self.window.newModelFields:
+            fieldValue = field.getvalue()
+            if not fieldValue:
+                continue
+
+            # An example of a field value would be Pos=(1, 2, 3)
+
+            s = fieldValue.split('=')
+            if len(s) != 2:
+                continue
+
+            fieldName = s[0]
+            fieldData = s[1]
+
+            try:
+                fieldData = eval(fieldData)
+            except:
+                continue
+
+            modelData.update({fieldName: fieldData})
+
+        self.window.newModelFields = []
+        self.window.newModelHeight = 300
+
         self.worldCreator.addObject(self.currentLocation[1] + '.world', self.currentLocation[0], newUid, modelData)
 
         self.nodePaths[node] = [newUid, node.getPos(), node.getHpr(), node.getScale(), set()]
@@ -842,11 +866,13 @@ class LevelEditorWindow(MegaToplevel):
         self.newModelDialog = Dialog(buttons=('Create Object',),
                                      title='New Model',
                                      command=self.editor.loadModel)
-        self.newModelDialog.geometry('300x300')
+        self.newModelDialog.geometry('250x150')
         self.newModelDialog.withdraw()
 
+        self.newModelHeight = 150
+
         self.newModelLabel = Label(self.newModelDialog.interior(),
-                                   text='Set the type, name (optional), color (optional) of the object')
+                                   text='Set the type, name (optional), color (optional)\n of the object, and any other fields...')
         self.newModelLabel.pack()
 
         self.newModelType = EntryField(self.newModelDialog.interior())
@@ -857,6 +883,13 @@ class LevelEditorWindow(MegaToplevel):
 
         self.newModelColor = EntryField(self.newModelDialog.interior())
         self.newModelColor.pack(fill=BOTH, expand=1)
+
+        self.newModelPlus = Button(self.newModelDialog.interior(),
+                                   text='+',
+                                   command=self.plusField)
+        self.newModelPlus.pack(fill=BOTH, expand=1)
+
+        self.newModelFields = []
 
         self.initialiseoptions(LevelEditorWindow)
 
@@ -899,6 +932,16 @@ class LevelEditorWindow(MegaToplevel):
 
     def updateObjSelected(self):
         self.updateObjDialog.activate()
+
+    def plusField(self):
+        _field = EntryField(self.newModelDialog.interior())
+        _field.pack(fill=BOTH, expand=1)
+
+        self.newModelHeight += 50
+        self.newModelDialog.geometry('250x' + str(self.newModelHeight))
+        self.newModelDialog.update_idletasks()
+
+        self.newModelFields.append(_field)
 
     def showResources(self, paths=[]):
         if not paths:
