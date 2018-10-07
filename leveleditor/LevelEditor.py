@@ -182,9 +182,10 @@ class LevelEditor(NodePath, DirectObject):
                         self.selected[0] = dataList[0]
                     else:
                         self.selected.append(dataList[0])
-                        if len(self.selected) == self.selectedAmount:
-                            self.selectedCallback()
-                            self.selected = []
+
+                    if len(self.selected) == self.selectedAmount:
+                        self.selectedCallback()
+                        self.selected = []
 
                 self.selectedNode = node
                 base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
@@ -205,9 +206,10 @@ class LevelEditor(NodePath, DirectObject):
                                         self.selected[0] = dataList[0]
                                     else:
                                         self.selected.append(dataList[0])
-                                        if len(self.selected) == self.selectedAmount:
-                                            self.selectedCallback()
-                                            self.selected = []
+
+                                    if len(self.selected) == self.selectedAmount:
+                                        self.selectedCallback()
+                                        self.selected = []
 
                                 self.selectedNode = node
                                 base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
@@ -218,9 +220,10 @@ class LevelEditor(NodePath, DirectObject):
                             self.selected[0] = dataList[0]
                         else:
                             self.selected.append(dataList[0])
-                            if len(self.selected) == self.selectedAmount:
-                                self.selectedCallback()
-                                self.selected = []
+
+                        if len(self.selected) == self.selectedAmount:
+                            self.selectedCallback()
+                            self.selected = []
 
                     self.selectedNode = node
                     base.direct.selectCB(node, fMultiSelect, fSelectTag, fResetAncestry, fLEPane, fUndo)
